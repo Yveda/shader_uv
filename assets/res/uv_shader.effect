@@ -1,0 +1,95 @@
+%{ // Cocos creator 定义的格式，描述shader的基本信息;
+  techniques: [
+    {
+	  // 渲染管道的一个流程pass, 这里面描述的就是管道的一些参数
+      passes: [
+        { // 每一个pass的参数配置,表示完成的渲染流程; bycw意思是博毅创为
+          vert: bycw_vs  // 顶点shader代码在哪里;
+          frag: bycw-fs  // 着色shader代码在哪里;
+		  
+          cullMode: none
+          depthTest: true  //是否开启深度测试
+          depthWrite: true
+          blend: true
+        }
+      ]
+      layer: 0
+    }
+  ]
+  
+  // 属性列表, 绑定到材质编辑器上的参数;
+  properties: {
+    diffuseTexture: {
+      type: sampler2D
+      value: null
+    }
+	
+	subTexture: {
+      type: sampler2D
+      value: null
+    }
+	
+	run_time: {
+	  type: number
+	  value: 0
+	}
+  }
+%} 
+
+// 顶点shader;
+%% bycw_vs { 
+// GLSL编程语言, 入口函数都是从main函数开始的;
+// 精度: (高highp，中mediump，低lowp)，这句话的意思就是说定义浮点高精度
+precision highp float;
+
+// 渲染管道传递给你的
+attribute vec3 a_position; // 顶点位置数据
+attribute mediump vec2 a_uv0; // 顶点纹理坐标;
+attribute lowp vec4 a_color; // 顶点颜色;
+attribute vec3 a_normal; // 顶点的法线;
+// end 
+
+// mat4 变换矩阵对象;
+// cc_matWorld, cc_matViewProj, 每次绘制的时候，游戏引擎会根据节点的旋转缩放给你设置进来;
+uniform mat4 cc_matWorld; // 模型--》世界坐标;
+uniform mat4 cc_matViewProj; // 世界---》透视坐标;
+// end 
+
+// vs ---> fs
+varying lowp vec4 v_color; 
+varying mediump vec2 v_uv0;
+// end 
+
+void main () { // 入口函数
+  vec4 position = vec4(a_position, 1); // vec4四位向量; 
+  v_uv0 = a_uv0; // 顶点纹理坐标---》着色shader;
+  v_color = a_color;  // 顶点颜色--->着色shader;
+  
+  // gl_Position: 来修改变换以后的顶点坐标，回给渲染管道gl_Position是不能改变的; 世界矩阵乘以position等于世界坐标，然后再变换视图投影
+  gl_Position = cc_matViewProj * cc_matWorld * position;
+}
+
+}
+// end 顶点shader
+
+// 着色shader 代码
+%% bycw-fs {
+
+precision highp float;
+// CPU 传递给shader 的纹理对象;
+uniform sampler2D diffuseTexture;
+uniform sampler2D subTexture;
+uniform float run_time;
+// 
+
+varying lowp vec4 v_color; // 顶点shader传入的变量;
+varying mediump vec2 v_uv0;
+
+void main () { // 入口函数;
+  vec2 offset = vec2(run_time, run_time);
+  vec4 light = texture2D(subTexture, v_uv0 + offset);
+  vec4 col = texture2D(diffuseTexture, v_uv0);
+  gl_FragColor = col + light;
+}
+}
+// 着色shader;
